@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Live English Coach</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #08080e;
+    --surface: #0f0f18;
+    --border: #1e1e2e;
+    --green: #4ade80;
+    --teal: #7dd3b8;
+    --red: #f87171;
+    --purple: #a78bfa;
+    --text: #e8e6e0;
+    --muted: #555570;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 32px 16px 60px;
+  }
+
+  header {
+    text-align: center;
+    margin-bottom: 36px;
+  }
+
+  header h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(26px, 5vw, 40px);
+    font-weight: 800;
+    background: linear-gradient(135deg, #e8e6e0, var(--teal), var(--green));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    letter-spacing: -1px;
+  }
+
+  header p {
+    font-size: 12px;
+    color: var(--muted);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-top: 6px;
+  }
+
+  .container { width: 100%; max-width: 700px; }
+
+  /* MIC BUTTON */
+  .mic-area {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 32px;
+    gap: 14px;
+  }
+
+  #micBtn {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    border: 2px solid var(--border);
+    background: var(--surface);
+    color: var(--muted);
+    font-size: 32px;
+    cursor: pointer;
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    outline: none;
+  }
+
+  #micBtn.listening {
+    border-color: var(--green);
+    color: var(--green);
+    box-shadow: 0 0 0 0 rgba(74,222,128,0.4);
+    animation: ripple 1.5s ease-out infinite;
+  }
+
+  @keyframes ripple {
+    0% { box-shadow: 0 0 0 0 rgba(74,222,128,0.4); }
+    70% { box-shadow: 0 0 0 20px rgba(74,222,128,0); }
+    100% { box-shadow: 0 0 0 0 rgba(74,222,128,0); }
+  }
+
+  #micBtn.processing {
+    border-color: var(--purple);
+    color: var(--purple);
+    animation: none;
+  }
+
+  .status-text {
+    font-size: 12px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--muted);
+    transition: color 0.3s;
+  }
+
+  .status-text.listening { color: var(--green); }
+  .status-text.processing { color: var(--purple); }
+
+  /* LIVE TRANSCRIPT */
+  .transcript-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 20px;
+    min-height: 80px;
+  }
+
+  .box-label {
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 10px;
+  }
+
+  #liveText {
+    font-size: 15px;
+    line-height: 1.75;
+    color: #aaa;
+    font-style: italic;
+    min-height: 24px;
+  }
+
+  #liveText .final { color: var(--text); font-style: normal; }
+  #liveText .interim { color: #666; font-style: italic; }
+
+  /* CORRECTIONS FEED */
+  .feed { display: flex; flex-direction: column; gap: 16px; }
+
+  .correction-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    animation: slideIn 0.4s ease;
+  }
+
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 14px;
+  }
+
+  .card-time {
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 1px;
+  }
+
+  .card-score {
+    font-size: 11px;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-weight: 500;
+  }
+
+  .score-good { background: #0d1f14; color: var(--green); border: 1px solid #1e4d2e; }
+  .score-ok { background: #1a150a; color: #fbbf24; border: 1px solid #4d3a0a; }
+  .score-fix { background: #1f0d0d; color: var(--red); border: 1px solid #4d1a1a; }
+
+  .original-text {
+    font-size: 13px;
+    color: #888;
+    padding: 10px 14px;
+    background: #0f0f18;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    border-left: 3px solid #333;
+  }
+
+  .corrected-text {
+    font-size: 15px;
+    color: #d4f5e0;
+    padding: 12px 14px;
+    background: #0d1f14;
+    border-radius: 8px;
+    border-left: 3px solid var(--green);
+    margin-bottom: 12px;
+    line-height: 1.65;
+  }
+
+  .copy-btn {
+    float: right;
+    background: #1e4d2e;
+    color: var(--green);
+    border: none;
+    border-radius: 5px;
+    padding: 3px 10px;
+    font-size: 11px;
+    cursor: pointer;
+    font-family: 'DM Mono', monospace;
+    margin-top: -4px;
+  }
+
+  .changes-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 10px;
+  }
+
+  .change-item {
+    display: flex;
+    gap: 8px;
+    font-size: 12px;
+    align-items: baseline;
+  }
+
+  .change-orig { color: var(--red); text-decoration: line-through; }
+  .change-arrow { color: var(--muted); }
+  .change-new { color: var(--green); }
+  .change-reason { color: var(--muted); font-size: 11px; }
+
+  .tip-box {
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+    background: #12101e;
+    border: 1px solid #2a2040;
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 12px;
+    color: #c4b8f0;
+    line-height: 1.6;
+  }
+
+  .no-changes {
+    font-size: 12px;
+    color: var(--green);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 4px;
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--muted);
+    font-size: 13px;
+    line-height: 2;
+  }
+
+  .loading-dots { display: inline-flex; gap: 4px; align-items: center; }
+  .dot {
+    width: 5px; height: 5px; border-radius: 50%;
+    background: var(--purple);
+    animation: blink 1.2s ease-in-out infinite;
+  }
+  .dot:nth-child(2) { animation-delay: 0.2s; }
+  .dot:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes blink { 0%,100%{opacity:0.2;} 50%{opacity:1;} }
+
+  .processing-card {
+    background: var(--surface);
+    border: 1px solid #2a2040;
+    border-radius: 12px;
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 13px;
+    color: var(--purple);
+    animation: slideIn 0.3s ease;
+  }
+
+  .clear-btn {
+    display: block;
+    margin: 20px auto 0;
+    background: transparent;
+    color: var(--muted);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 20px;
+    font-size: 12px;
+    cursor: pointer;
+    font-family: 'DM Mono', monospace;
+    letter-spacing: 1px;
+    transition: all 0.2s;
+  }
+
+  .clear-btn:hover { color: var(--text); border-color: #333; }
+
+  .error-banner {
+    background: #1f0d0d;
+    border: 1px solid #4d1a1a;
+    color: var(--red);
+    border-radius: 10px;
+    padding: 14px 18px;
+    font-size: 13px;
+    margin-bottom: 20px;
+    line-height: 1.6;
+  }
+</style>
+</head>
+<body>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+
+<header>
+  <h1>Live English Coach</h1>
+  <p>Speak → Transcribe → Correct in real time</p>
+</header>
+
+<div class="container">
+  <div id="errorBanner" class="error-banner" style="display:none"></div>
+
+  <div class="mic-area">
+    <button id="micBtn" onclick="toggleListen()" title="Click to start/stop">🎤</button>
+    <span class="status-text" id="statusText">Click the mic to start</span>
+  </div>
+
+  <div class="transcript-box">
+    <div class="box-label">🎙 Live transcript</div>
+    <div id="liveText"><span style="color:#333">Waiting for speech...</span></div>
+  </div>
+
+  <div id="feed" class="feed">
+    <div class="empty-state">
+      Your corrections will appear here<br>as you speak ✦
+    </div>
+  </div>
+
+  <button class="clear-btn" onclick="clearFeed()">Clear history</button>
+</div>
+
+<script>
+  const SYSTEM_PROMPT = `You are an expert English language coach for tech/AI professionals. 
+Analyze the spoken English and respond ONLY with a JSON object (no markdown, no backticks):
+{
+  "corrected": "Natural, professional improved version",
+  "score": "good|ok|fix",
+  "changes": [
+    { "original": "phrase", "improved": "better phrase", "reason": "why" }
+  ],
+  "tip": "One short fluency tip for this specific sentence"
+}
+score: "good" = minor or no issues, "ok" = a few improvements, "fix" = significant corrections needed.
+Keep changes to 2-4 max. If perfect, return empty changes array.
+Always respond in English.`;
+
+  let recognition = null;
+  let isListening = false;
+  let finalTranscript = '';
+  let debounceTimer = null;
+  let isProcessing = false;
+
+  function initSpeech() {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      showError("Your browser doesn't support Speech Recognition. Please use Chrome or Edge.");
+      return false;
+    }
+
+    recognition = new SpeechRecognition();
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = 'en-US';
+
+    recognition.onresult = (e) => {
+      let interim = '';
+      let newFinal = '';
+
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        const t = e.results[i].transcript;
+        if (e.results[i].isFinal) {
+          newFinal += t;
+        } else {
+          interim += t;
+        }
+      }
+
+      if (newFinal) {
+        finalTranscript += newFinal + ' ';
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => {
+          if (finalTranscript.trim().length > 8) {
+            processText(finalTranscript.trim());
+            finalTranscript = '';
+          }
+        }, 1400);
+      }
+
+      document.getElementById('liveText').innerHTML =
+        `<span class="final">${finalTranscript}</span><span class="interim">${interim}</span>`;
+    };
+
+    recognition.onerror = (e) => {
+      if (e.error === 'no-speech') return;
+      if (e.error === 'not-allowed') {
+        showError("Microphone access denied. Please allow microphone permissions and reload.");
+      }
+      stopListening();
+    };
+
+    recognition.onend = () => {
+      if (isListening) recognition.start();
+    };
+
+    return true;
+  }
+
+  function toggleListen() {
+    if (isListening) {
+      stopListening();
+    } else {
+      startListening();
+    }
+  }
+
+  function startListening() {
+    if (!recognition && !initSpeech()) return;
+    isListening = true;
+    finalTranscript = '';
+    document.getElementById('micBtn').className = 'listening';
+    document.getElementById('statusText').className = 'status-text listening';
+    document.getElementById('statusText').textContent = 'Listening...';
+    document.getElementById('liveText').innerHTML = '<span style="color:#333">Speak now...</span>';
+    recognition.start();
+  }
+
+  function stopListening() {
+    isListening = false;
+    if (recognition) recognition.stop();
+    document.getElementById('micBtn').className = '';
+    document.getElementById('statusText').className = 'status-text';
+    document.getElementById('statusText').textContent = 'Click the mic to start';
+  }
+
+  async function processText(text) {
+    if (isProcessing) return;
+    isProcessing = true;
+
+    const processingId = 'proc_' + Date.now();
+    const feed = document.getElementById('feed');
+
+    // Remove empty state
+    const empty = feed.querySelector('.empty-state');
+    if (empty) empty.remove();
+
+    // Add processing indicator
+    const proc = document.createElement('div');
+    proc.id = processingId;
+    proc.className = 'processing-card';
+    proc.innerHTML = `<div class="loading-dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div> <span>Analyzing: "${text.slice(0, 60)}${text.length > 60 ? '...' : ''}"</span>`;
+    feed.insertBefore(proc, feed.firstChild);
+
+    try {
+      const res = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "claude-sonnet-4-20250514",
+          max_tokens: 1000,
+          system: SYSTEM_PROMPT,
+          messages: [{ role: "user", content: text }]
+        })
+      });
+
+      const data = await res.json();
+      const raw = data.content.map(i => i.text || '').join('');
+      const clean = raw.replace(/```json|```/g, '').trim();
+      const result = JSON.parse(clean);
+
+      // Replace processing card with correction card
+      const card = buildCard(text, result);
+      feed.replaceChild(card, document.getElementById(processingId));
+
+    } catch (err) {
+      const card = document.createElement('div');
+      card.className = 'processing-card';
+      card.style.borderColor = '#4d1a1a';
+      card.style.color = '#f87171';
+      card.innerHTML = '⚠ Could not process. Try again.';
+      feed.replaceChild(card, document.getElementById(processingId));
+    }
+
+    isProcessing = false;
+  }
+
+  function buildCard(original, result) {
+    const card = document.createElement('div');
+    card.className = 'correction-card';
+
+    const scoreClass = result.score === 'good' ? 'score-good' : result.score === 'ok' ? 'score-ok' : 'score-fix';
+    const scoreLabel = result.score === 'good' ? '✦ Good' : result.score === 'ok' ? '~ Improve' : '✗ Fix';
+    const time = new Date().toLocaleTimeString('en', { hour: '2-digit', minute: '2-digit' });
+
+    let changesHtml = '';
+    if (result.changes && result.changes.length > 0) {
+      changesHtml = `<div class="changes-list">${
+        result.changes.map(c => `
+          <div class="change-item">
+            <span class="change-orig">${c.original}</span>
+            <span class="change-arrow">→</span>
+            <span class="change-new">${c.improved}</span>
+            <span class="change-reason">— ${c.reason}</span>
+          </div>
+        `).join('')
+      }</div>`;
+    } else {
+      changesHtml = `<div class="no-changes">✓ Sounds natural — no major changes needed</div>`;
+    }
+
+    const correctedDiffers = result.corrected.trim().toLowerCase() !== original.trim().toLowerCase();
+
+    card.innerHTML = `
+      <div class="card-header">
+        <span class="card-time">${time}</span>
+        <span class="card-score ${scoreClass}">${scoreLabel}</span>
+      </div>
+      <div class="original-text">${original}</div>
+      <div class="corrected-text">
+        <button class="copy-btn" onclick="copyText(this, '${result.corrected.replace(/'/g, "\\'")}')">Copy</button>
+        ${result.corrected}
+      </div>
+      ${changesHtml}
+      <div class="tip-box"><span>💡</span><span>${result.tip}</span></div>
+    `;
+
+    return card;
+  }
+
+  function copyText(btn, text) {
+    navigator.clipboard.writeText(text);
+    btn.textContent = 'Copied!';
+    setTimeout(() => btn.textContent = 'Copy', 2000);
+  }
+
+  function clearFeed() {
+    const feed = document.getElementById('feed');
+    feed.innerHTML = '<div class="empty-state">Your corrections will appear here<br>as you speak ✦</div>';
+    finalTranscript = '';
+    document.getElementById('liveText').innerHTML = '<span style="color:#333">Waiting for speech...</span>';
+  }
+
+  function showError(msg) {
+    const el = document.getElementById('errorBanner');
+    el.textContent = msg;
+    el.style.display = 'block';
+  }
+</script>
+</body>
+</html>
